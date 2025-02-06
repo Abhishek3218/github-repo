@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco-Friendly Route Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f8ff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2e8b57;
+            text-align: center;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #2e8b57;
+            color: white;
+            cursor: pointer;
+        }
+        .results {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .route-option {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-left: 4px solid #2e8b57;
+            background-color: #f8f8f8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Eco-Friendly Route Finder</h1>
+        <div id="map"></div>
+        <div class="controls">
+            <input type="text" id="origin" placeholder="Enter starting point">
+            <input type="text" id="destination" placeholder="Enter destination">
+            <select id="transport-mode">
+                <option value="all">All Modes</option>
+                <option value="walking">Walking</option>
+                <option value="bicycling">Bicycling</option>
+                <option value="transit">Public Transport</option>
+                <option value="driving">Driving</option>
+            </select>
+            <button onclick="findEcoRoute()">Find Eco-Friendly Route</button>
+        </div>
+        <div class="results" id="results">
+
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let directionsService;
+        let directionsRenderer;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: -34.397, lng: 150.644},
+                zoom: 8
+            });
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+        }
+
+        function findEcoRoute() {
+            const origin = document.getElementById('origin').value;
+            const destination = document.getElementById('destination').value;
+            const mode = document.getElementById('transport-mode').value;
+
+            if (!origin || !destination) {
+                alert('Please enter both origin and destination');
+                return;
+            }
+
+            const request = {
+                origin: origin,
+                destination: destination,
+                travelMode: mode === 'all' ? null : mode.toUpperCase(),
+                provideRouteAlternatives: true
+            };
+
+            directionsService.route(request, (response, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(response);
+                    displayEcoResults(response.routes);
+                } else {
+                    alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+
+        function displayEcoResults(routes) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            routes.forEach((route, index) => {
+                const distance = route.legs[0].distance.text;
+                const duration = route.legs[0].duration.text;
+                const steps = route.legs[0].steps;
+                const carbonFootprint = calculateCarbonFootprint(route);
+                const ecoScore = calculateEcoScore(route);
+
+                const routeDiv = document.createElement('div');
+                routeDiv.className = 'route-option';
+                routeDiv.innerHTML = `
+                    <h3>Route Option ${index + 1}</h3>
+                    <p>Distance: ${distance}</p>
+                    <p>Duration: ${duration}</p>
+                    <p>Carbon Footprint: ${carbonFootprint} kg CO2</p>
+                    <p>Eco Score: ${ecoScore}/10</p>
+                    <button onclick="selectRoute(${index})">Select This Route</button>
+                `;
+                resultsDiv.appendChild(routeDiv);
+            });
+        }
+
+        function calculateCarbonFootprint(route) {
+
+            const distanceKm = route.legs[0].distance.value / 1000;
+            const mode = route.legs[0].steps[0].travel_mode;
+            
+            let emissionFactor;
+            switch(mode) {
+                case 'WALKING':
+                    emissionFactor = 0;
+                    break;
+                case 'BICYCLING':
+                    emissionFactor = 0.005;
+                    break;
+                case 'TRANSIT':
+                    emissionFactor = 0.1;
+                    break;
+                case 'DRIVING':
+                    emissionFactor = 0.2;
+                    break;
+                default:
+                    emissionFactor = 0.15;
+            }
+            
+            return (distanceKm * emissionFactor).toFixed(2);
+        }
+
+        function calculateEcoScore(route) {
+
+            const distanceKm = route.legs[0].distance.value / 1000;
+            const durationHours = route.legs[0].duration.value / 3600;
+            const mode = route.legs[0].steps[0].travel_mode;
+            
+            let score = 10;
+            if (mode === 'DRIVING') score -= 4;
+            if (durationHours > 1) score -= 1;
+            if (distanceKm > 10) score -= 1;
+            
+            return Math.max(1, Math.min(10, score));
+        }
+
+        function selectRoute(index) {
+            alert(`You selected Route Option ${index + 1}`);
+            // Additional functionality for selected route
+        }
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDQCdHZZZxl5Zj8KNpFMKt10oqkAZE6MpQ&callback=initMap">
+    </script>
+</body>
+</html>
+
+#Coded with 💙 BY Abhishek3218
