@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS AI Assistant</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d2b 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            perspective: 1000px;
+        }
+
+        #jarvis-interface {
+            background: rgba(42, 42, 42, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 50px rgba(0, 123, 255, 0.15);
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+        }
+
+        #jarvis-interface:hover {
+            transform: translateY(-10px) rotateX(5deg);
+        }
+
+        #output {
+            min-height: 200px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(51, 51, 51, 0.6);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: translateZ(20px);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #007bff 0%, #00c6ff 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            transform: translateZ(10px);
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #0095ff 100%);
+            transform: translateZ(15px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 123, 255, 0.2);
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            color: #00ff00;
+        }
+
+        .circle-animation {
+            width: 150px;
+            height: 150px;
+            border: 5px solid transparent;
+            border-radius: 50%;
+            margin: 20px auto;
+            background: linear-gradient(45deg, #007bff, #00ff88);
+            position: relative;
+            animation: pulse 2s infinite, rotate 10s linear infinite;
+        }
+
+        .circle-animation::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #007bff, #00ff88);
+            z-index: -1;
+            filter: blur(15px);
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JARVIS AI Assistant</h1>
+        <div id="jarvis-interface">
+            <div class="circle-animation"></div>
+            <div id="output">Waiting for your command...</div>
+            <div class="status" id="status">Status: Ready</div>
+            <div class="controls">
+                <button onclick="startListening()">Start Listening</button>
+                <button onclick="stopListening()">Stop Listening</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recognition;
+        let isListening = false;
+
+        function initSpeechRecognition() {
+            try {
+                window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    document.getElementById('status').innerHTML = 'Status: Listening...';
+                    isListening = true;
+                };
+
+                recognition.onend = function() {
+                    if (isListening) {
+                        recognition.start();
+                    }
+                };
+
+                recognition.onresult = function(event) {
+                    const last = event.results.length - 1;
+                    const command = event.results[last][0].transcript.toLowerCase().trim();
+                    document.getElementById('output').innerHTML = `Command: ${command}`;
+                    processCommand(command);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    document.getElementById('status').innerHTML = `Status: Error - ${event.error}`;
+                    if (event.error === 'no-speech' && isListening) {
+                        recognition.stop();
+                        setTimeout(() => {
+                            if (isListening) recognition.start();
+                        }, 500);
+                    }
+                };
+            } catch (error) {
+                console.error('Speech recognition not supported:', error);
+                document.getElementById('status').innerHTML = 'Status: Speech recognition not supported in this browser';
+            }
+        }
+
+        function processCommand(command) {
+            if (command.includes('open google')) {
+                speak('Opening Google');
+                window.open('https://www.google.com', '_blank');
+            }
+            else if (command.includes('open youtube')) {
+                speak('Opening YouTube');
+                window.open('https://www.youtube.com', '_blank');
+            }
+            else if (command.includes('what time')) {
+                const time = new Date().toLocaleTimeString();
+                speak(`The current time is ${time}`);
+            }
+            else if (command.includes('what date')) {
+                const date = new Date().toLocaleDateString();
+                speak(`Today's date is ${date}`);
+            }
+            else if (command.includes('hello jarvis')) {
+                speak('Hello! How can I help you today?');
+            }
+            else if (command.includes('open gmail')) {
+                speak('Opening Gmail');
+                window.open('https://mail.google.com', '_blank');
+            }
+            else if (command.includes('open maps')) {
+                speak('Opening Google Maps');
+                window.open('https://maps.google.com', '_blank');
+            }
+            else if (command.includes('weather')) {
+                speak('Opening weather forecast');
+                window.open('https://weather.com', '_blank');
+            }
+            else if (command.includes('tell me a joke')) {
+                const jokes = [
+                    "Why don't programmers like nature? It has too many bugs!",
+                    "What did the AI say to the other AI? Let's be more than just neural networks!",
+                    "Why did the computer go to the doctor? Because it had a virus!"
+                ];
+                const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
+                speak(randomJoke);
+            }
+            else if (command.includes('search for')) {
+                const searchQuery = command.replace('search for', '').trim();
+                speak(`Searching for ${searchQuery}`);
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
+            }
+        }
+
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function startListening() {
+            try {
+                if (!recognition) {
+                    initSpeechRecognition();
+                }
+                recognition.start();
+                isListening = true;
+                document.getElementById('status').innerHTML = 'Status: Listening...';
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+            }
+        }
+
+        function stopListening() {
+            try {
+                if (recognition) {
+                    recognition.stop();
+                    isListening = false;
+                    document.getElementById('status').innerHTML = 'Status: Stopped';
+                }
+            } catch (error) {
+                console.error('Error stopping recognition:', error);
+            }
+        }
+
+        window.onload = function() {
+            try {
+                initSpeechRecognition();
+                speak('Jarvis is ready for your commands');
+            } catch (error) {
+                console.error('Error initializing:', error);
+            }
+        };
+    </script>
+</body>
+</html> 
